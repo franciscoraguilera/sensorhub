@@ -31,8 +31,8 @@ Connect both sensors to the system's I²C bus (SDA/SCL pins).
 
 ```bash
 # Clone repository
-git clone https://github.com/franciscoraguilera/advanced-multithread_sensorhub.git
-cd advanced-multithread_sensorhub
+git clone https://github.com/franciscoraguilera/sensorhub.git
+cd sensorhub
 
 # Build
 mkdir build && cd build
