@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include "queue.h"
 
 // Global shared sensor data queue

@@ -1,19 +1,19 @@
 #include "utils.h"
 #include <signal.h>
 
-// Global exit flag
-static volatile int exit_flag = 0;
+// Global exit flag using C11 atomics for proper thread safety
+static atomic_int exit_flag = ATOMIC_VAR_INIT(0);
 
 void init_utils(void) {
-    exit_flag = 0;
+    atomic_store(&exit_flag, 0);
 }
 
 int should_exit(void) {
-    return exit_flag;
+    return atomic_load(&exit_flag);
 }
 
 void set_exit_flag(void) {
-    exit_flag = 1;
+    atomic_store(&exit_flag, 1);
 }
 
 // Instantiate the global sensor queue
