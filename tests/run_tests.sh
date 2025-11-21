@@ -2,8 +2,6 @@
 
 # Run all unit tests
 
-set -e  # Exit on error
-
 echo "================================"
 echo "Running SensorHub Unit Tests"
 echo "================================"
@@ -21,16 +19,27 @@ run_test() {
     TEST_NAME=$1
     echo ""
     echo "Running $TEST_NAME..."
+
+    # Check if test binary exists
+    if [ ! -f "./$TEST_NAME" ]; then
+        echo -e "${RED}✗ $TEST_NAME - Binary not found${NC}"
+        ((TESTS_FAILED++))
+        return 1
+    fi
+
+    # Run the test and capture output
     if ./$TEST_NAME; then
         echo -e "${GREEN}✓ $TEST_NAME PASSED${NC}"
         ((TESTS_PASSED++))
+        return 0
     else
         echo -e "${RED}✗ $TEST_NAME FAILED${NC}"
         ((TESTS_FAILED++))
+        return 1
     fi
 }
 
-# Run tests
+# Run tests (don't exit on failure, run all tests)
 run_test "test_utils"
 run_test "test_config"
 run_test "test_queue"

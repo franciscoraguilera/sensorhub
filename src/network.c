@@ -8,12 +8,65 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <ctype.h>
 
 #define BUFFER_SIZE 2048
 
+// Helper function to HTML-escape a string to prevent XSS
+static void html_escape(const char *src, char *dest, size_t dest_size) {
+    size_t j = 0;
+    for (size_t i = 0; src[i] != '\0' && j < dest_size - 6; i++) {
+        // Reserve 6 chars for worst case entity like &quot;
+        switch (src[i]) {
+            case '<':
+                if (j + 4 < dest_size) {
+                    strcpy(dest + j, "&lt;");
+                    j += 4;
+                }
+                break;
+            case '>':
+                if (j + 4 < dest_size) {
+                    strcpy(dest + j, "&gt;");
+                    j += 4;
+                }
+                break;
+            case '&':
+                if (j + 5 < dest_size) {
+                    strcpy(dest + j, "&amp;");
+                    j += 5;
+                }
+                break;
+            case '"':
+                if (j + 6 < dest_size) {
+                    strcpy(dest + j, "&quot;");
+                    j += 6;
+                }
+                break;
+            case '\'':
+                if (j + 6 < dest_size) {
+                    strcpy(dest + j, "&#39;");
+                    j += 5;
+                }
+                break;
+            default:
+                // Only allow printable ASCII characters
+                if (isprint((unsigned char)src[i])) {
+                    dest[j++] = src[i];
+                } else {
+                    // Replace non-printable with space
+                    dest[j++] = ' ';
+                }
+                break;
+        }
+    }
+    dest[j] = '\0';
+}
+
 // Helper function to parse HTTP request and extract method and path
+// Prevents buffer overflow by limiting field widths
 static void parse_http_request(const char *request, char *method, char *path) {
-    sscanf(request, "%s %s", method, path);
+    // Limit method to 15 chars, path to 255 chars (leaving space for null terminator)
+    sscanf(request, "%15s %255s", method, path);
 }
 
 // Helper function to send HTTP response
@@ -211,12 +264,15 @@ void *network_thread(void *arg) {
                 generate_json_response(response_body, sizeof(response_body));
                 send_response(new_socket, "200 OK", "application/json", response_body);
             } else {
-                // 404 Not Found
+                // 404 Not Found - HTML escape the path to prevent XSS
+                char escaped_path[512];
+                html_escape(path, escaped_path, sizeof(escaped_path));
+
                 snprintf(response_body, sizeof(response_body),
                          "<!DOCTYPE html><html><head><title>404 Not Found</title></head>"
                          "<body><h1>404 Not Found</h1><p>The requested path '%s' was not found.</p>"
                          "<p><a href='/'>Go to homepage</a></p></body></html>",
-                         path);
+                         escaped_path);
                 send_response(new_socket, "404 Not Found", "text/html; charset=utf-8", response_body);
             }
         } else {

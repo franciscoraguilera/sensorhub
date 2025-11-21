@@ -58,24 +58,29 @@ void *data_processor_thread(void *arg) {
             }
         }
 
-        // Check for sensor timeouts
+        // Check for sensor timeouts (checking if the OTHER sensor has timed out)
+        // Only check timeout for sensors that have sent at least one reading
         int sensor1_timed_out = 0;
         int sensor2_timed_out = 0;
 
-        if (got_sensor1 && (now - last_sensor1_time) > g_config.sensor_timeout) {
+        if (got_sensor1 && last_sensor1_time > 0 &&
+            reading.sensor_id != 1 &&  // Only check sensor1 timeout when processing sensor2 data
+            (now - last_sensor1_time) > g_config.sensor_timeout) {
             sensor1_timed_out = 1;
             if (!sensor1_timeout_warned) {
-                printf("[Processor] Warning: Sensor1 timeout (no data for %ds)\n",
-                       g_config.sensor_timeout);
+                printf("[Processor] Warning: Sensor1 timeout (no data for %lds)\n",
+                       (long)(now - last_sensor1_time));
                 sensor1_timeout_warned = 1;
             }
         }
 
-        if (got_sensor2 && (now - last_sensor2_time) > g_config.sensor_timeout) {
+        if (got_sensor2 && last_sensor2_time > 0 &&
+            reading.sensor_id != 2 &&  // Only check sensor2 timeout when processing sensor1 data
+            (now - last_sensor2_time) > g_config.sensor_timeout) {
             sensor2_timed_out = 1;
             if (!sensor2_timeout_warned) {
-                printf("[Processor] Warning: Sensor2 timeout (no data for %ds)\n",
-                       g_config.sensor_timeout);
+                printf("[Processor] Warning: Sensor2 timeout (no data for %lds)\n",
+                       (long)(now - last_sensor2_time));
                 sensor2_timeout_warned = 1;
             }
         }
@@ -117,10 +122,11 @@ void *data_processor_thread(void *arg) {
             fflush(log_file);
 
             // Update the latest reading for network monitoring
+            // Use timeout flags instead of got_sensorX (which are already reset)
             pthread_mutex_lock(&latest_mutex);
             snprintf(latest_reading.time_str, sizeof(latest_reading.time_str), "%s", time_str);
-            latest_reading.sensor1 = got_sensor1 ? latest_temp1 : -999;
-            latest_reading.sensor2 = got_sensor2 ? latest_temp2 : -999;
+            latest_reading.sensor1 = sensor1_timed_out ? -999 : latest_temp1;
+            latest_reading.sensor2 = sensor2_timed_out ? -999 : latest_temp2;
             latest_reading.average = average;
             pthread_mutex_unlock(&latest_mutex);
         }
