@@ -58,13 +58,12 @@ void *data_processor_thread(void *arg) {
             }
         }
 
-        // Check for sensor timeouts (checking if the OTHER sensor has timed out)
+        // Check for sensor timeouts on every reading
         // Only check timeout for sensors that have sent at least one reading
         int sensor1_timed_out = 0;
         int sensor2_timed_out = 0;
 
         if (got_sensor1 && last_sensor1_time > 0 &&
-            reading.sensor_id != 1 &&  // Only check sensor1 timeout when processing sensor2 data
             (now - last_sensor1_time) > g_config.sensor_timeout) {
             sensor1_timed_out = 1;
             if (!sensor1_timeout_warned) {
@@ -75,7 +74,6 @@ void *data_processor_thread(void *arg) {
         }
 
         if (got_sensor2 && last_sensor2_time > 0 &&
-            reading.sensor_id != 2 &&  // Only check sensor2 timeout when processing sensor1 data
             (now - last_sensor2_time) > g_config.sensor_timeout) {
             sensor2_timed_out = 1;
             if (!sensor2_timeout_warned) {
@@ -89,8 +87,9 @@ void *data_processor_thread(void *arg) {
         int should_process = 0;
         float average = 0;
         char time_str[64];
-        struct tm *tm_info = localtime(&now);
-        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+        struct tm tm_info;
+        localtime_r(&now, &tm_info);
+        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", &tm_info);
 
         if (got_sensor1 && got_sensor2 && !sensor1_timed_out && !sensor2_timed_out) {
             // Both sensors working - process normally

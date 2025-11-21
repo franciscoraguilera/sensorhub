@@ -27,21 +27,21 @@ void test_queue_push_pop() {
 
     // Push items
     assert(queue_push(&q, reading1) == 0);
-    assert(q.size == 1);
+    assert(queue_size(&q) == 1);
     assert(queue_push(&q, reading2) == 0);
-    assert(q.size == 2);
+    assert(queue_size(&q) == 2);
 
     // Pop items
     sensor_reading_t popped;
     assert(queue_pop(&q, &popped) == 0);
     assert(popped.sensor_id == 1);
     assert(popped.temperature == 23.5f);
-    assert(q.size == 1);
+    assert(queue_size(&q) == 1);
 
     assert(queue_pop(&q, &popped) == 0);
     assert(popped.sensor_id == 2);
     assert(popped.temperature == 24.6f);
-    assert(q.size == 0);
+    assert(queue_size(&q) == 0);
 
     queue_destroy(&q);
     printf("  PASSED\n");
@@ -58,11 +58,11 @@ void test_queue_max_size() {
     assert(queue_push(&q, reading) == 0);
     assert(queue_push(&q, reading) == 0);
     assert(queue_push(&q, reading) == 0);
-    assert(q.size == 3);
+    assert(queue_size(&q) == 3);
 
     // Try to push beyond max
     assert(queue_push(&q, reading) == -1);
-    assert(q.size == 3);  // Size should not increase
+    assert(queue_size(&q) == 3);  // Size should not increase
 
     queue_destroy(&q);
     printf("  PASSED\n");
@@ -79,7 +79,7 @@ void test_queue_unbounded() {
     for (int i = 0; i < 100; i++) {
         assert(queue_push(&q, reading) == 0);
     }
-    assert(q.size == 100);
+    assert(queue_size(&q) == 100);
 
     queue_destroy(&q);
     printf("  PASSED\n");

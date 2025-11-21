@@ -11,6 +11,7 @@
 #include <ctype.h>
 
 #define BUFFER_SIZE 2048
+#define INVALID_TEMP -999.0f
 
 // Helper function to HTML-escape a string to prevent XSS
 static void html_escape(const char *src, char *dest, size_t dest_size) {
@@ -18,36 +19,51 @@ static void html_escape(const char *src, char *dest, size_t dest_size) {
     for (size_t i = 0; src[i] != '\0' && j < dest_size - 6; i++) {
         // Reserve 6 chars for worst case entity like &quot;
         switch (src[i]) {
-            case '<':
-                if (j + 4 < dest_size) {
-                    strcpy(dest + j, "&lt;");
-                    j += 4;
+            case '<': {
+                const char *entity = "&lt;";
+                size_t entity_len = 4;
+                if (j + entity_len < dest_size) {
+                    memcpy(dest + j, entity, entity_len);
+                    j += entity_len;
                 }
                 break;
-            case '>':
-                if (j + 4 < dest_size) {
-                    strcpy(dest + j, "&gt;");
-                    j += 4;
+            }
+            case '>': {
+                const char *entity = "&gt;";
+                size_t entity_len = 4;
+                if (j + entity_len < dest_size) {
+                    memcpy(dest + j, entity, entity_len);
+                    j += entity_len;
                 }
                 break;
-            case '&':
-                if (j + 5 < dest_size) {
-                    strcpy(dest + j, "&amp;");
-                    j += 5;
+            }
+            case '&': {
+                const char *entity = "&amp;";
+                size_t entity_len = 5;
+                if (j + entity_len < dest_size) {
+                    memcpy(dest + j, entity, entity_len);
+                    j += entity_len;
                 }
                 break;
-            case '"':
-                if (j + 6 < dest_size) {
-                    strcpy(dest + j, "&quot;");
-                    j += 6;
+            }
+            case '"': {
+                const char *entity = "&quot;";
+                size_t entity_len = 6;
+                if (j + entity_len < dest_size) {
+                    memcpy(dest + j, entity, entity_len);
+                    j += entity_len;
                 }
                 break;
-            case '\'':
-                if (j + 6 < dest_size) {
-                    strcpy(dest + j, "&#39;");
-                    j += 5;
+            }
+            case '\'': {
+                const char *entity = "&#39;";
+                size_t entity_len = 5;
+                if (j + entity_len < dest_size) {
+                    memcpy(dest + j, entity, entity_len);
+                    j += entity_len;
                 }
                 break;
+            }
             default:
                 // Only allow printable ASCII characters
                 if (isprint((unsigned char)src[i])) {
@@ -101,13 +117,13 @@ static void generate_html_response(char *buffer, size_t size) {
         // Format sensor values (handle N/A cases)
         char sensor1_str[32], sensor2_str[32];
 
-        if (latest_reading.sensor1 == -999) {
+        if (latest_reading.sensor1 == INVALID_TEMP) {
             snprintf(sensor1_str, sizeof(sensor1_str), "N/A");
         } else {
             snprintf(sensor1_str, sizeof(sensor1_str), "%.2f &deg;C", latest_reading.sensor1);
         }
 
-        if (latest_reading.sensor2 == -999) {
+        if (latest_reading.sensor2 == INVALID_TEMP) {
             snprintf(sensor2_str, sizeof(sensor2_str), "N/A");
         } else {
             snprintf(sensor2_str, sizeof(sensor2_str), "%.2f &deg;C", latest_reading.sensor2);
@@ -154,27 +170,34 @@ static void generate_json_response(char *buffer, size_t size) {
         // Format sensor values (handle N/A cases)
         char sensor1_str[32], sensor2_str[32];
 
-        if (latest_reading.sensor1 == -999) {
+        if (latest_reading.sensor1 == INVALID_TEMP) {
             snprintf(sensor1_str, sizeof(sensor1_str), "null");
         } else {
             snprintf(sensor1_str, sizeof(sensor1_str), "%.2f", latest_reading.sensor1);
         }
 
-        if (latest_reading.sensor2 == -999) {
+        if (latest_reading.sensor2 == INVALID_TEMP) {
             snprintf(sensor2_str, sizeof(sensor2_str), "null");
         } else {
             snprintf(sensor2_str, sizeof(sensor2_str), "%.2f", latest_reading.sensor2);
         }
 
+        // Handle average: output null if both sensors are unavailable
+        char average_str[32];
+        if (latest_reading.sensor1 == INVALID_TEMP && latest_reading.sensor2 == INVALID_TEMP) {
+            snprintf(average_str, sizeof(average_str), "null");
+        } else {
+            snprintf(average_str, sizeof(average_str), "%.2f", latest_reading.average);
+        }
         snprintf(buffer, size,
                  "{"
                  "\"timestamp\":\"%s\","
                  "\"sensor1\":%s,"
                  "\"sensor2\":%s,"
-                 "\"average\":%.2f,"
+                 "\"average\":%s,"
                  "\"status\":\"ok\""
                  "}",
-                 latest_reading.time_str, sensor1_str, sensor2_str, latest_reading.average);
+                 latest_reading.time_str, sensor1_str, sensor2_str, average_str);
     } else {
         snprintf(buffer, size,
                  "{"
