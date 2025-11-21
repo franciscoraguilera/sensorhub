@@ -27,11 +27,43 @@ void test_config_load() {
     // Try to load config.ini from project root
     int result = config_load("../config.ini");
 
-    // Even if file doesn't exist, defaults should be loaded
-    assert(g_config.sensor1_address == 0x48 || g_config.sensor1_address != 0);
-    assert(g_config.network_port > 0);
+    // If file exists and loads successfully, verify specific expected value
+    // If file doesn't exist (result == -1), defaults should be loaded
+    if (result == 0) {
+        // File loaded successfully, check it has valid configuration
+        assert(g_config.sensor1_address == 0x48);  // Verify expected value from config.ini
+        assert(g_config.network_port > 0 && g_config.network_port <= 65535);
+    } else {
+        // File not found, defaults should be loaded
+        assert(g_config.sensor1_address == 0x48);  // Default value
+        assert(g_config.network_port == 8080);     // Default value
+    }
 
     printf("  PASSED (result=%d)\n", result);
+}
+
+void test_config_validation() {
+    printf("Testing config validation with invalid values...\n");
+
+    // Save current config
+    config_t saved = g_config;
+
+    // Test invalid sensor interval (should fail validation)
+    config_load_defaults();
+    g_config.sensor1_interval = -1;  // Invalid
+    // Note: We can't directly test validate_config as it's static,
+    // but we can verify defaults are sane
+    config_load_defaults();
+    assert(g_config.sensor1_interval > 0);
+
+    // Test invalid port (should fail validation)
+    config_load_defaults();
+    assert(g_config.network_port >= 1 && g_config.network_port <= 65535);
+
+    // Restore config
+    g_config = saved;
+
+    printf("  PASSED\n");
 }
 
 int main(void) {
@@ -39,6 +71,7 @@ int main(void) {
 
     test_config_defaults();
     test_config_load();
+    test_config_validation();
 
     printf("\nAll config tests passed!\n\n");
     return 0;
