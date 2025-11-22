@@ -83,6 +83,20 @@ static void html_escape(const char *src, char *dest, size_t dest_size) {
 static void parse_http_request(const char *request, char *method, char *path) {
     // Limit method to 15 chars, path to 255 chars (leaving space for null terminator)
     sscanf(request, "%15s %255s", method, path);
+    // Check for truncation: if method or path is at max length and next char is not space/end
+    if (strlen(method) == 15 && request[15] != ' ') {
+        // Truncation detected for method
+        method[0] = '\0'; // Invalidate method
+    }
+    // Find start of path in request
+    const char *path_start = strchr(request, ' ');
+    if (path_start != NULL) {
+        path_start++; // Move past space
+        if (strlen(path) == 255 && path_start[255] != ' ' && path_start[255] != '\r' && path_start[255] != '\n' && path_start[255] != '\0') {
+            // Truncation detected for path
+            path[0] = '\0'; // Invalidate path
+        }
+    }
 }
 
 // Helper function to send HTTP response
