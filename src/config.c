@@ -96,12 +96,14 @@ static int validate_config(void) {
 
     // Validate I2C addresses (0x03-0x77 for 7-bit addressing)
     if (g_config.sensor1_address < 0x03 || g_config.sensor1_address > 0x77) {
-        fprintf(stderr, "[Config] Warning: sensor1_address 0x%02x outside typical I2C range (0x03-0x77)\n",
+        fprintf(stderr, "[Config] Error: sensor1_address 0x%02x outside typical I2C range (0x03-0x77)\n",
                 g_config.sensor1_address);
+        valid = 0;
     }
     if (g_config.sensor2_address < 0x03 || g_config.sensor2_address > 0x77) {
-        fprintf(stderr, "[Config] Warning: sensor2_address 0x%02x outside typical I2C range (0x03-0x77)\n",
+        fprintf(stderr, "[Config] Error: sensor2_address 0x%02x outside typical I2C range (0x03-0x77)\n",
                 g_config.sensor2_address);
+        valid = 0;
     }
 
     return valid;
