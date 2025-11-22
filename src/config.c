@@ -165,8 +165,15 @@ int config_load(const char *filename) {
         if (!equals) continue;
 
         *equals = '\0';
+        char key_buf[128], value_buf[256];
         char *key = trim(trimmed);
         char *value = trim(equals + 1);
+        strncpy(key_buf, key, sizeof(key_buf) - 1);
+        key_buf[sizeof(key_buf) - 1] = '\0';
+        strncpy(value_buf, value, sizeof(value_buf) - 1);
+        value_buf[sizeof(value_buf) - 1] = '\0';
+        key = key_buf;
+        value = value_buf;
 
         // Parse based on section and key
         if (strcmp(section, "sensors") == 0) {
