@@ -19,7 +19,9 @@ void sigint_handler(int signum) {
     printf("\nSIGINT received, shutting down...\n");
     set_exit_flag();
     // Wake up any threads waiting on the queue
+    pthread_mutex_lock(&sensor_queue.mutex);
     pthread_cond_broadcast(&sensor_queue.cond);
+    pthread_mutex_unlock(&sensor_queue.mutex);
 }
 
 int main(int argc, char *argv[]) {
