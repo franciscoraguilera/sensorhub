@@ -8,6 +8,7 @@
 #include "network.h"
 #include "utils.h"
 #include "queue.h"
+#include "config.h"
 
 // Thread identifiers
 pthread_t sensor1_tid, sensor2_tid, processor_tid, network_tid;
@@ -18,16 +19,33 @@ void sigint_handler(int signum) {
     printf("\nSIGINT received, shutting down...\n");
     set_exit_flag();
     // Wake up any threads waiting on the queue
+    pthread_mutex_lock(&sensor_queue.mutex);
     pthread_cond_broadcast(&sensor_queue.cond);
-    // Also wake up the network thread (if blocked in accept)
-    // (Accept will return error when should_exit() is true.)
+    pthread_mutex_unlock(&sensor_queue.mutex);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    // Load configuration
+    const char *config_file = "config.ini";
+    if (argc > 1) {
+        config_file = argv[1];
+    }
+
+    if (config_load(config_file) != 0) {
+        fprintf(stderr, "Warning: Failed to load config from '%s', using defaults\n", config_file);
+    }
+
+    printf("=== SensorHub Starting ===\n");
+
+    // Initialize utilities
     init_utils();
-    // Initialize the sensor queue
-    queue_init(&sensor_queue);
-    
+
+    // Initialize the sensor queue with configured max size
+    queue_init(&sensor_queue, g_config.queue_max_size);
+    printf("[Main] Queue initialized with max_size=%d\n",
+           g_config.queue_max_size == 0 ? -1 : g_config.queue_max_size);
+
+    // Register signal handler
     signal(SIGINT, sigint_handler);
 
     // Create sensor threads
@@ -39,16 +57,20 @@ int main(void) {
         perror("Failed to create sensor2 thread");
         exit(EXIT_FAILURE);
     }
+
     // Create data processing thread
     if (pthread_create(&processor_tid, NULL, data_processor_thread, NULL) != 0) {
         perror("Failed to create data processor thread");
         exit(EXIT_FAILURE);
     }
+
     // Create network interface thread
     if (pthread_create(&network_tid, NULL, network_thread, NULL) != 0) {
         perror("Failed to create network thread");
         exit(EXIT_FAILURE);
     }
+
+    printf("[Main] All threads started successfully\n");
 
     // Wait for all threads to complete
     pthread_join(sensor1_tid, NULL);

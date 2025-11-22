@@ -1,6 +1,7 @@
 #include "sensor.h"
 #include "queue.h"
 #include "utils.h"
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -11,9 +12,8 @@
 
 // Helper function to read temperature from a TMP102 sensor at a given I2C address.
 // Returns temperature in °C on success; on failure, returns -999.
-static float read_temperature(int i2c_address) {
-    const char *i2c_device = "/dev/i2c-1";
-    int file = open(i2c_device, O_RDWR);
+static float read_temperature(int i2c_address, const char *device_path) {
+    int file = open(device_path, O_RDWR);
     if (file < 0) {
         perror("Opening I2C device");
         return -999;
@@ -52,38 +52,52 @@ static float read_temperature(int i2c_address) {
 
 void *sensor1_thread(void *arg) {
     (void)arg;
+    printf("[Sensor1] Starting (address=0x%02x, interval=%ds)\n",
+           g_config.sensor1_address, g_config.sensor1_interval);
+
     while (!should_exit()) {
-        float temp = read_temperature(0x48);
+        float temp = read_temperature(g_config.sensor1_address, g_config.i2c_device);
         if (temp != -999) {
             sensor_reading_t reading;
             reading.sensor_id = 1;
             reading.temperature = temp;
             reading.timestamp = time(NULL);
-            queue_push(&sensor_queue, reading);
-            printf("[Sensor1] Temperature: %.2f°C\n", temp);
+            int result = queue_push(&sensor_queue, reading);
+            if (result == 0) {
+                printf("[Sensor1] Temperature: %.2f°C\n", temp);
+            }
+            // If queue_push fails (returns -1), it already logged an error
         } else {
             printf("[Sensor1] Error reading sensor.\n");
         }
-        sleep(1);  // Read every 1 second
+        sleep(g_config.sensor1_interval);
     }
+    printf("[Sensor1] Shutting down\n");
     return NULL;
 }
 
 void *sensor2_thread(void *arg) {
     (void)arg;
+    printf("[Sensor2] Starting (address=0x%02x, interval=%ds)\n",
+           g_config.sensor2_address, g_config.sensor2_interval);
+
     while (!should_exit()) {
-        float temp = read_temperature(0x49);
+        float temp = read_temperature(g_config.sensor2_address, g_config.i2c_device);
         if (temp != -999) {
             sensor_reading_t reading;
             reading.sensor_id = 2;
             reading.temperature = temp;
             reading.timestamp = time(NULL);
-            queue_push(&sensor_queue, reading);
-            printf("[Sensor2] Temperature: %.2f°C\n", temp);
+            int result = queue_push(&sensor_queue, reading);
+            if (result == 0) {
+                printf("[Sensor2] Temperature: %.2f°C\n", temp);
+            }
+            // If queue_push fails (returns -1), it already logged an error
         } else {
             printf("[Sensor2] Error reading sensor.\n");
         }
-        sleep(2);  // Read every 2 seconds
+        sleep(g_config.sensor2_interval);
     }
+    printf("[Sensor2] Shutting down\n");
     return NULL;
 }
