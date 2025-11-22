@@ -246,7 +246,7 @@ int config_load(const char *filename) {
 
     // Validate all configuration values
     if (!validate_config()) {
-        fprintf(stderr, "[Config] Error: Configuration validation failed, using defaults\n");
+        fprintf(stderr, "[Config] Error: Configuration validation failed. Falling back to defaults and continuing.\n");
         config_load_defaults();
         return -1;
     }
