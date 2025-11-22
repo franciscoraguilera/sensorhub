@@ -16,8 +16,8 @@
 // Helper function to HTML-escape a string to prevent XSS
 static void html_escape(const char *src, char *dest, size_t dest_size) {
     size_t j = 0;
-    for (size_t i = 0; src[i] != '\0' && j < dest_size - 6; i++) {
-        // Reserve 6 chars for worst case entity like &quot;
+    for (size_t i = 0; src[i] != '\0' && j < dest_size - 1; i++) {
+        // Check space for at least one more char; entity writes are checked per-case below
         switch (src[i]) {
             case '<': {
                 const char *entity = "&lt;";
